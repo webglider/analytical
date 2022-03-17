@@ -4,6 +4,7 @@ LICENSE file in the root directory of this source tree.
 *******************************************************************************/
 
 #include "AnalyticalNetwork.hh"
+#include <cstdlib>
 
 using namespace Analytical;
 
@@ -26,6 +27,13 @@ int AnalyticalNetwork::total_stat_rows;
 std::shared_ptr<AstraSim::CSVWriter> AnalyticalNetwork::end_to_end_csv;
 
 std::shared_ptr<AstraSim::CSVWriter> AnalyticalNetwork::dimensional_info_csv;
+
+// Null net hack
+std::string getEnvVar( std::string const & key ) const
+{
+    char * val = getenv( key.c_str() );
+    return val == NULL ? std::string("") : std::string(val);
+}
 
 void AnalyticalNetwork::setEventQueue(
     const std::shared_ptr<EventQueue>& event_queue_ptr) noexcept {
@@ -112,6 +120,11 @@ int AnalyticalNetwork::sim_send(
   auto used_dim = -1;
   std::tie(delta.time_val, used_dim) =
       topology->send(src, dst, count); // simulate src->dst and get latency
+    
+   // Null net hack
+    if(getEnvVar("NULLNET") != "") {
+        delta.time_val = 0;
+    }
 
   // accumulate total message size
   if (src == 0) {
@@ -178,6 +191,11 @@ int AnalyticalNetwork::sim_recv(
       // send operation already finished.
       // invoke recv handler immediately
       delta.time_val = 0;
+    }
+      
+      // Null net hack
+    if(getEnvVar("NULLNET") != "") {
+        delta.time_val = 0;
     }
 
     // schedule recv handler
